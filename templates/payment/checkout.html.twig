@@ -1,0 +1,9 @@
+{% extends 'base.html.twig' %}
+
+{% block title %} Make payment {% endblock %}
+
+{% block body %}
+    <form action="{{ path('app_checkout') }}" method="POST">
+        <button type="submit">Checkout</button>
+    </form>
+{% endblock %}

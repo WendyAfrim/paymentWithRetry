@@ -10,6 +10,14 @@
         {% endblock %}
 
         {% block javascripts %}
+            <script src="https://code.jquery.com/jquery-3.1.0.js"
+                    integrity="sha256-slogkvB1K3VOkzAI8QITxV3VzpOnkeNVsKvtkYLMjfk="
+                    crossorigin="anonymous"></script>
+            <script type="text/javascript">
+                let TWIG = {}
+                {% block twig_js %}
+                {% endblock %}
+            </script>
             {{ encore_entry_script_tags('app') }}
         {% endblock %}
     </head>

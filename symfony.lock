@@ -145,6 +145,9 @@
             "tests/bootstrap.php"
         ]
     },
+    "predis/predis": {
+        "version": "v1.1.10"
+    },
     "psr/cache": {
         "version": "1.0.1"
     },
@@ -219,6 +222,9 @@
         "files": [
             "config/packages/sensio_framework_extra.yaml"
         ]
+    },
+    "stripe/stripe-php": {
+        "version": "v8.2.0"
     },
     "symfony/asset": {
         "version": "v5.4.7"
