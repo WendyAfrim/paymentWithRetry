@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use Psr\Cache\CacheItemPoolInterface;
 use Stripe\Stripe;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Cache\Adapter\RedisAdapter;
@@ -11,7 +12,13 @@ use Symfony\Component\Routing\Annotation\Route;
 class PaymentController extends AbstractController
 {
     const PAYMENT_KEY = 'st_payment';
-    const REDIS_URL = 'redis://127.0.0.1:53020';
+
+    private $cacheItemPool;
+
+    public function __construct(CacheItemPoolInterface  $cacheItemPool) {
+
+        $this->cacheItemPool = $cacheItemPool;
+    }
 
     /**
      * @Route("/payment", name="app_payment")
@@ -43,7 +50,9 @@ class PaymentController extends AbstractController
     {
 
         $secretKey = $_ENV['STRIPE_SECRET'];
+        $itemPotencyKey = uniqid();
         $stripe = new \Stripe\StripeClient($secretKey);
+
 
         $paymentMethod = $stripe->paymentMethods->create([
             'type' => 'card',
@@ -63,10 +72,19 @@ class PaymentController extends AbstractController
                 "payment_method"=> $paymentMethod,
                 'return_url' => 'http://localhost:8001/'.$this->generateUrl('app_checkout'),
                 'confirm' => true
+            ],
+            [
+                'idempotency_key' => $itemPotencyKey
             ]
         );
-        $response = $this->setPaymentInRedisSession($response);
-        dd($response);
+
+        $clientTransation = [
+            'stripe_response' => $response,
+            'transaction_id'  => self::PAYMENT_KEY.'_'.$response->id,
+            'idem_potency_key' => $itemPotencyKey
+        ];
+
+        $response = $this->setIdemPotencyKeyInSession($clientTransation);
 
         return new Response(
             json_encode($response->client_secret),
@@ -77,15 +95,17 @@ class PaymentController extends AbstractController
 
     public function getRedisConnection()
     {
-        return RedisAdapter::createConnection(self::REDIS_URL);
+        return $this->cacheItemPool;
     }
 
-    public function setPaymentInRedisSession ($response)
+    public function setIdemPotencyKeyInSession(array $clientTransaction)
     {
         $redisCache = $this->getRedisConnection();
 
-        if (!$redisCache->get(self::PAYMENT_KEY)) {
-            $redisCache->set(self::PAYMENT_KEY.'_'.$response->id, $response);
+        $valueFromCache = $redisCache->getItem($clientTransaction['idem_potency_key']);
+
+        if (!$valueFromCache->isHit()) {
+            $valueFromCache->set($clientTransaction);
         }
 
         return new Response(
